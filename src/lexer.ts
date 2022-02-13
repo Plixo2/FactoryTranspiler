@@ -3,10 +3,10 @@ import { Token, TokenType } from './tokenizer';
 import os = require('os');
 import { DomObject, StringBuilder } from './dom-object';
 import { createContentTag, createTextObject, createSingtonTag } from './dom-object';
-import { FactorySyntaxException, FactoryTokenException } from './exceptions';
+import { FactoryMismatchException, FactorySyntaxException, FactoryTokenException } from './exceptions';
 
 export function createSyntaxTree(stream: IterableStream<Token>): DomObject {
-    const objects: DomObject[] = createDomObjects(stream);
+    const objects: DomObject[] = createDomObjects(stream, TokenType.EOF);
 
     function debug(buffer: StringBuilder) {
         buffer.append('DOM');
@@ -33,32 +33,34 @@ export function createSyntaxTree(stream: IterableStream<Token>): DomObject {
     };
 }
 
-function createDomObjects(stream: IterableStream<Token>): DomObject[] {
+function createDomObjects(stream: IterableStream<Token>, returnOn: TokenType = TokenType.BRACES_CLOSED): DomObject[] {
     const tags: DomObject[] = [];
 
+    let wasExited = false;
     while (stream.hasEntriesLeft()) {
         const tag: Token = stream.step();
 
-        if (tag == null) {
+        if (tag == undefined) {
             throw new FactoryTokenException(stream, 'found null, but expected tag, string or closing braces');
+            return tags;
         } else if (tag.type === TokenType.TAG) {
             const bracket: Token = stream.step();
-            if (bracket == null) {
+            if (bracket == undefined) {
                 throw new FactoryTokenException(stream, null, TokenType.PARENTHESES_OPEN);
             }
             if (bracket.type === TokenType.PARENTHESES_OPEN) {
                 const attributes: Token[] = convertToAttributes(stream);
                 const closingBracket: Token = stream.getCurrentEntry();
-                if (closingBracket == null) {
+                if (closingBracket == undefined) {
                     throw new FactoryTokenException(stream, null, TokenType.PARENTHESES_CLOSED);
                 }
                 if (closingBracket.type === TokenType.PARENTHESES_CLOSED) {
                     const braces: Token = stream.step();
-                    if (braces != null && braces.type === TokenType.BRACES_OPEN) {
+                    if (braces != undefined && braces.type === TokenType.BRACES_OPEN) {
                         tags.push(createContentTag(tag, attributes, createDomObjects(stream)));
                     } else {
                         tags.push(createSingtonTag(tag, attributes));
-                        if (braces != null) stream.stepBackwards();
+                        if (braces != undefined) stream.stepBackwards();
                     }
                 } else {
                     throw new FactoryTokenException(stream, closingBracket, TokenType.PARENTHESES_CLOSED);
@@ -66,8 +68,8 @@ function createDomObjects(stream: IterableStream<Token>): DomObject[] {
             } else {
                 throw new FactoryTokenException(stream, bracket, TokenType.PARENTHESES_OPEN);
             }
-        } else if (tag.type === TokenType.BRACES_CLOSED) {
-            break;
+        } else if (tag.type === returnOn) {
+            return tags;
         } else if (tag.type === TokenType.STRING) {
             tags.push(createTextObject(tag));
         } else {
@@ -78,14 +80,17 @@ function createDomObjects(stream: IterableStream<Token>): DomObject[] {
         }
     }
 
-    return tags;
+    throw new FactoryMismatchException(
+        stream,
+        'some tokens to parse where left, check your opening and closing braces'
+    );
 }
 
 function convertToAttributes(stream: IterableStream<Token>): Token[] {
     const tokens: Token[] = [];
     while (stream.hasEntriesLeft()) {
         const token: Token = stream.step();
-        if (token == null) {
+        if (token == undefined) {
             throw new FactoryTokenException(stream, null, TokenType.PARENTHESES_CLOSED);
         }
 
@@ -99,16 +104,16 @@ function convertToAttributes(stream: IterableStream<Token>): Token[] {
 }
 function convertToAttribute(stream: IterableStream<Token>): Token {
     const start = stream.getCurrentEntry();
-    if (start == null) {
+    if (start == undefined) {
         throw new FactoryTokenException(stream, 'found null, but expected opening bracket, tag or opening parentheses');
     }
     const startIndex = stream.index();
 
     if (start.type === TokenType.BRACKET_OPEN) {
         const content = stream.step();
-        if (content != null && content.type === TokenType.TAG) {
+        if (content != undefined && content.type === TokenType.TAG) {
             const closing = stream.step();
-            if (closing != null && closing.type === TokenType.BRACKET_CLOSED) {
+            if (closing != undefined && closing.type === TokenType.BRACKET_CLOSED) {
                 const assign = convertToAttributeContent(stream);
                 let suffix = '';
                 if (assign) {
@@ -129,9 +134,9 @@ function convertToAttribute(stream: IterableStream<Token>): Token {
         }
     } else if (start.type === TokenType.PARENTHESES_OPEN) {
         const content = stream.step();
-        if (content != null && content.type === TokenType.TAG) {
+        if (content != undefined && content.type === TokenType.TAG) {
             const closing = stream.step();
-            if (closing != null && closing.type === TokenType.PARENTHESES_CLOSED) {
+            if (closing != undefined && closing.type === TokenType.PARENTHESES_CLOSED) {
                 const assign = convertToAttributeContent(stream);
                 let suffix = '';
                 if (assign) {
@@ -165,7 +170,7 @@ function convertToAttribute(stream: IterableStream<Token>): Token {
         };
     } else if (start.type === TokenType.ASTERISK) {
         const content = stream.step();
-        if (content != null && content.type === TokenType.TAG) {
+        if (content != undefined && content.type === TokenType.TAG) {
             const assign = convertToAttributeContent(stream);
             let suffix = '';
             if (assign) {
@@ -192,12 +197,12 @@ function convertToAttribute(stream: IterableStream<Token>): Token {
 function convertToAttributeContent(stream: IterableStream<Token>): Token | undefined {
     const assign = stream.step();
 
-    if (assign == null) {
+    if (assign == undefined) {
         throw new FactoryTokenException(stream, null, TokenType.BRACKET_CLOSED);
     }
     if (assign.type === TokenType.ASSIGN) {
         const string = stream.step();
-        if (string != null && string.type === TokenType.STRING) {
+        if (string != undefined && string.type === TokenType.STRING) {
             return string;
         } else {
             throw new FactoryTokenException(stream, string, TokenType.STRING);

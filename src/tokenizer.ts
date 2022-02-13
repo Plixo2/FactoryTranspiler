@@ -16,6 +16,7 @@ export enum TokenType {
     ASTERISK,
     EOL,
     WHITESPACE,
+    EOF,
 }
 export interface Token {
     type: TokenType;
@@ -24,15 +25,48 @@ export interface Token {
     end: number;
 }
 
-export function createTokenStream(input: string): IterableStream<Token> {
+export function createTokenStream(input: string): IterableTokenStream {
     const tokens: Token[] = [];
+    input = input.replace(os.EOL, '\n');
+    return new IterableTokenStream([...createLineTokens(-1, input)]);
+}
+class IterableTokenStream extends IterableStream<Token> {
+    public step(): Token {
+        let typ: TokenType;
+        do {
+            super.step();
+            if (!this.getCurrentEntry()) {
+                break;
+            }
+            typ = this.getCurrentEntry().type;
+        } while (
+            this.hasEntriesLeft() &&
+            this.getCurrentEntry() != undefined &&
+            (typ == TokenType.WHITESPACE || typ == TokenType.EOL)
+        );
+        return this.getCurrentEntry();
+    }
 
-    let line: number = 0;
-    input.split(os.EOL).forEach((lineString) => {
-        tokens.push(...createLineTokens(line, lineString));
-        line += 1;
-    });
-    return new IterableStream(tokens);
+    public stepBackwards(): void {
+        let typ: TokenType;
+        do {
+            super.stepBackwards();
+            super.stepBackwards();
+            super.step();
+
+            if (!this.getCurrentEntry()) {
+                break;
+            }
+            typ = this.getCurrentEntry().type;
+        } while (
+            this.hasEntriesLeft() &&
+            this.getCurrentEntry() != undefined &&
+            (typ == TokenType.WHITESPACE || typ == TokenType.EOL)
+        );
+        if (!this.hasEntriesLeft()) {
+            return undefined;
+        }
+    }
 }
 
 function createLineTokens(line: number, input: string): Token[] {
@@ -48,8 +82,14 @@ function createLineTokens(line: number, input: string): Token[] {
         if (!character) {
             continue;
         }
-
-        if (character.trim().length === 0) {
+        if (character == '\n') {
+            tokens.push({
+                type: TokenType.EOL,
+                start: lastContentAt,
+                data: '\n',
+                end: stream.index(),
+            });
+        } else if (character.trim().length === 0) {
             tokens.push({
                 type: TokenType.WHITESPACE,
                 start: lastContentAt,
@@ -146,11 +186,12 @@ function createLineTokens(line: number, input: string): Token[] {
         lastContentAt = stream.index();
     }
     tokens.push({
-        type: TokenType.EOL,
+        type: TokenType.EOF,
         start: lastContentAt,
-        data: os.EOL,
+        data: '>End of File<',
         end: stream.index(),
     });
+
     return tokens;
 }
 

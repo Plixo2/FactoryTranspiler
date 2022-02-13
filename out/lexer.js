@@ -6,7 +6,7 @@ const os = require("os");
 const dom_object_1 = require("./dom-object");
 const exceptions_1 = require("./exceptions");
 function createSyntaxTree(stream) {
-    const objects = createDomObjects(stream);
+    const objects = createDomObjects(stream, tokenizer_1.TokenType.EOF);
     function debug(buffer) {
         buffer.append('DOM');
         buffer.append(os.EOL);
@@ -33,32 +33,34 @@ function createSyntaxTree(stream) {
     };
 }
 exports.createSyntaxTree = createSyntaxTree;
-function createDomObjects(stream) {
+function createDomObjects(stream, returnOn = tokenizer_1.TokenType.BRACES_CLOSED) {
     const tags = [];
+    let wasExited = false;
     while (stream.hasEntriesLeft()) {
         const tag = stream.step();
-        if (tag == null) {
+        if (tag == undefined) {
             throw new exceptions_1.FactoryTokenException(stream, 'found null, but expected tag, string or closing braces');
+            return tags;
         }
         else if (tag.type === tokenizer_1.TokenType.TAG) {
             const bracket = stream.step();
-            if (bracket == null) {
+            if (bracket == undefined) {
                 throw new exceptions_1.FactoryTokenException(stream, null, tokenizer_1.TokenType.PARENTHESES_OPEN);
             }
             if (bracket.type === tokenizer_1.TokenType.PARENTHESES_OPEN) {
                 const attributes = convertToAttributes(stream);
                 const closingBracket = stream.getCurrentEntry();
-                if (closingBracket == null) {
+                if (closingBracket == undefined) {
                     throw new exceptions_1.FactoryTokenException(stream, null, tokenizer_1.TokenType.PARENTHESES_CLOSED);
                 }
                 if (closingBracket.type === tokenizer_1.TokenType.PARENTHESES_CLOSED) {
                     const braces = stream.step();
-                    if (braces != null && braces.type === tokenizer_1.TokenType.BRACES_OPEN) {
+                    if (braces != undefined && braces.type === tokenizer_1.TokenType.BRACES_OPEN) {
                         tags.push((0, dom_object_1.createContentTag)(tag, attributes, createDomObjects(stream)));
                     }
                     else {
                         tags.push((0, dom_object_1.createSingtonTag)(tag, attributes));
-                        if (braces != null)
+                        if (braces != undefined)
                             stream.stepBackwards();
                     }
                 }
@@ -70,8 +72,8 @@ function createDomObjects(stream) {
                 throw new exceptions_1.FactoryTokenException(stream, bracket, tokenizer_1.TokenType.PARENTHESES_OPEN);
             }
         }
-        else if (tag.type === tokenizer_1.TokenType.BRACES_CLOSED) {
-            break;
+        else if (tag.type === returnOn) {
+            return tags;
         }
         else if (tag.type === tokenizer_1.TokenType.STRING) {
             tags.push((0, dom_object_1.createTextObject)(tag));
@@ -80,13 +82,13 @@ function createDomObjects(stream) {
             throw new exceptions_1.FactoryTokenException(stream, 'found ' + tokenizer_1.TokenType[tag.type] + ', but expected tag, string or closing braces');
         }
     }
-    return tags;
+    throw new exceptions_1.FactoryMismatchException(stream, 'some tokens to parse where left, check your opening and closing braces');
 }
 function convertToAttributes(stream) {
     const tokens = [];
     while (stream.hasEntriesLeft()) {
         const token = stream.step();
-        if (token == null) {
+        if (token == undefined) {
             throw new exceptions_1.FactoryTokenException(stream, null, tokenizer_1.TokenType.PARENTHESES_CLOSED);
         }
         if (token.type === tokenizer_1.TokenType.PARENTHESES_CLOSED) {
@@ -98,15 +100,15 @@ function convertToAttributes(stream) {
 }
 function convertToAttribute(stream) {
     const start = stream.getCurrentEntry();
-    if (start == null) {
+    if (start == undefined) {
         throw new exceptions_1.FactoryTokenException(stream, 'found null, but expected opening bracket, tag or opening parentheses');
     }
     const startIndex = stream.index();
     if (start.type === tokenizer_1.TokenType.BRACKET_OPEN) {
         const content = stream.step();
-        if (content != null && content.type === tokenizer_1.TokenType.TAG) {
+        if (content != undefined && content.type === tokenizer_1.TokenType.TAG) {
             const closing = stream.step();
-            if (closing != null && closing.type === tokenizer_1.TokenType.BRACKET_CLOSED) {
+            if (closing != undefined && closing.type === tokenizer_1.TokenType.BRACKET_CLOSED) {
                 const assign = convertToAttributeContent(stream);
                 let suffix = '';
                 if (assign) {
@@ -129,9 +131,9 @@ function convertToAttribute(stream) {
     }
     else if (start.type === tokenizer_1.TokenType.PARENTHESES_OPEN) {
         const content = stream.step();
-        if (content != null && content.type === tokenizer_1.TokenType.TAG) {
+        if (content != undefined && content.type === tokenizer_1.TokenType.TAG) {
             const closing = stream.step();
-            if (closing != null && closing.type === tokenizer_1.TokenType.PARENTHESES_CLOSED) {
+            if (closing != undefined && closing.type === tokenizer_1.TokenType.PARENTHESES_CLOSED) {
                 const assign = convertToAttributeContent(stream);
                 let suffix = '';
                 if (assign) {
@@ -167,7 +169,7 @@ function convertToAttribute(stream) {
     }
     else if (start.type === tokenizer_1.TokenType.ASTERISK) {
         const content = stream.step();
-        if (content != null && content.type === tokenizer_1.TokenType.TAG) {
+        if (content != undefined && content.type === tokenizer_1.TokenType.TAG) {
             const assign = convertToAttributeContent(stream);
             let suffix = '';
             if (assign) {
@@ -190,12 +192,12 @@ function convertToAttribute(stream) {
 }
 function convertToAttributeContent(stream) {
     const assign = stream.step();
-    if (assign == null) {
+    if (assign == undefined) {
         throw new exceptions_1.FactoryTokenException(stream, null, tokenizer_1.TokenType.BRACKET_CLOSED);
     }
     if (assign.type === tokenizer_1.TokenType.ASSIGN) {
         const string = stream.step();
-        if (string != null && string.type === tokenizer_1.TokenType.STRING) {
+        if (string != undefined && string.type === tokenizer_1.TokenType.STRING) {
             return string;
         }
         else {

@@ -1,6 +1,6 @@
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.FactoryCharacterException = exports.FactoryTokenException = exports.FactorySyntaxException = exports.FactoryException = void 0;
+exports.FactoryMismatchException = exports.FactorySyntaxException = exports.FactoryTokenException = exports.FactoryCharacterException = exports.FactoryException = void 0;
 const tokenizer_1 = require("./tokenizer");
 class FactoryException extends Error {
     constructor(stream, text) {
@@ -9,12 +9,12 @@ class FactoryException extends Error {
     }
 }
 exports.FactoryException = FactoryException;
-class FactorySyntaxException extends FactoryException {
+class FactoryCharacterException extends FactoryException {
     constructor(stream, error) {
-        super(stream, 'Failed to parse: ' + error);
+        super(stream, error);
     }
 }
-exports.FactorySyntaxException = FactorySyntaxException;
+exports.FactoryCharacterException = FactoryCharacterException;
 class FactoryTokenException extends FactoryException {
     constructor(stream, type, expected) {
         if (typeof type === 'string') {
@@ -25,9 +25,15 @@ class FactoryTokenException extends FactoryException {
     }
 }
 exports.FactoryTokenException = FactoryTokenException;
-class FactoryCharacterException extends FactoryException {
+class FactorySyntaxException extends FactoryTokenException {
     constructor(stream, error) {
         super(stream, error);
     }
 }
-exports.FactoryCharacterException = FactoryCharacterException;
+exports.FactorySyntaxException = FactorySyntaxException;
+class FactoryMismatchException extends FactoryTokenException {
+    constructor(stream, error) {
+        super(stream, error);
+    }
+}
+exports.FactoryMismatchException = FactoryMismatchException;

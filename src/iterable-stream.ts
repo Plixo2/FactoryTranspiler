@@ -1,39 +1,39 @@
 export class IterableStream<T> {
-   entries: T[];
-   position = 0;
-   currentToken?: T = undefined;
+    entries: T[];
+    position = 0;
+    currentToken?: T = undefined;
 
-  constructor(list: T[]) {
-    this.entries = list;
-    this.position = 0;
-  }
-
-  public step(): T | undefined {
-    if (this.position >= this.entries.length) {
-      return undefined;
+    constructor(list: T[]) {
+        this.entries = list;
+        this.position = 0;
     }
-    this.currentToken = this.entries[this.position];
-    this.position += 1;
-    return this.currentToken;
-  }
 
-  public stepBackwards() {
-    this.position -= 1;
-  }
+    public step(): T | undefined {
+        if (this.position >= this.entries.length) {
+            return undefined;
+        }
+        this.currentToken = this.entries[this.position];
+        this.position += 1;
+        return this.currentToken;
+    }
 
-  public reset() {
-    this.position = 0;
-    this.step();
-  }
+    public stepBackwards() {
+        this.position -= 1;
+    }
 
-  public hasEntriesLeft() {
-    return this.position < this.entries.length;
-  }
+    public reset() {
+        this.position = 0;
+        this.step();
+    }
 
-  public index() {
-    return this.position;
-  }
-  public getCurrentEntry(): T | undefined {
-    return this.currentToken;
-  }
+    public hasEntriesLeft() {
+        return this.position < this.entries.length;
+    }
+
+    public index() {
+        return this.position;
+    }
+    public getCurrentEntry(): T | undefined {
+        return this.currentToken;
+    }
 }

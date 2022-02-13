@@ -1,19 +1,19 @@
 import { IterableStream } from './iterable-stream';
 import { Token, TokenType } from './tokenizer';
 
-export class FactoryException extends Error {
-    constructor(public stream: IterableStream<any>, text: string) {
+export class FactoryException<T> extends Error {
+    constructor(public stream: IterableStream<T>, text: string) {
         super(text);
     }
 }
 
-export class FactorySyntaxException extends FactoryException {
-    constructor(stream: IterableStream<Token>, error: string) {
-        super(stream, 'Failed to parse: ' + error);
+export class FactoryCharacterException extends FactoryException<string> {
+    constructor(stream: IterableStream<string>, error: string) {
+        super(stream, error);
     }
 }
 
-export class FactoryTokenException extends FactoryException {
+export class FactoryTokenException extends FactoryException<Token> {
     constructor(stream: IterableStream<Token>, type: Token | string, expected?: TokenType) {
         if (typeof type === 'string') {
             super(stream, 'Failed to parse Token: ' + type);
@@ -23,8 +23,14 @@ export class FactoryTokenException extends FactoryException {
     }
 }
 
-export class FactoryCharacterException extends FactoryException {
-    constructor(stream: IterableStream<string>, error: string) {
+export class FactorySyntaxException extends FactoryTokenException {
+    constructor(stream: IterableStream<Token>, error: string) {
+        super(stream, error);
+    }
+}
+
+export class FactoryMismatchException extends FactoryTokenException {
+    constructor(stream: IterableStream<Token>, error: string) {
         super(stream, error);
     }
 }
