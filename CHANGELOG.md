@@ -1,5 +1,9 @@
 # Change Log
 
+## [2.1.3]
+
+-   a .html with the same name and directory gets created now
+
 ## [2.1.2]
 
 -   fixed readme
