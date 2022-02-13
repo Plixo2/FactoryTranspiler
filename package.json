@@ -1,0 +1,38 @@
+{
+    "name": "factory-transpiler",
+    "version": "2.1.2",
+    "description": "Factory Transpiler for HTML",
+    "main": "./out/index.js",
+    "scripts": {
+        "test": "echo \"Error: no test specified\" && exit 1",
+        "start": "node ."
+    },
+    "repository": {
+        "type": "git",
+        "url": "git+ssh://git@github.com/Plixo2/FactoryTranspiler.git"
+    },
+    "keywords": [
+        "html-transpiler",
+        "html",
+        "transpiler",
+        "factory"
+    ],
+    "prettier": {
+        "trailingComma": "es5",
+        "tabWidth": 4,
+        "semi": true,
+        "singleQuote": true,
+        "bracketSpacing": true,
+        "printWidth": 120
+    },
+    "author": "Plixo",
+    "license": "ISC",
+    "bugs": {
+        "url": "https://github.com/Plixo2/FactoryTranspiler/issues"
+    },
+    "homepage": "https://github.com/Plixo2/FactoryTranspiler#readme",
+    "devDependencies": {
+        "@types/node": "^17.0.17",
+        "typescript": "^4.5.5"
+    }
+}
