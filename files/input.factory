@@ -1,7 +1,7 @@
 meta(charset="UTF-8")
 div(a="a") {
     div(b="b") {
-        div(c="c" test="a") {
+        div(c="c" test) {
             "text"
             auto-formated() {
 
@@ -11,8 +11,10 @@ div(a="a") {
     button(class="rounded") {
         "Click Me"
     }
-}1
+
+
 div(a="b" *ngIf="showHello") {
     "hello"
     br() 
     img(src="picture.png")
+}

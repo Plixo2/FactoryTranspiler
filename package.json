@@ -1,6 +1,6 @@
 {
     "name": "factory-transpiler",
-    "version": "2.2.1",
+    "version": "2.3.0",
     "description": "Factory Transpiler for HTML",
     "main": "./out/index.js",
     "scripts": {

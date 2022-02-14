@@ -18,6 +18,7 @@ class IterableStream {
     }
     stepBackwards() {
         this.position -= 1;
+        this.currentToken = this.entries[this.position];
     }
     reset() {
         this.position = 0;

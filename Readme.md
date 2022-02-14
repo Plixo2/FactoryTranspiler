@@ -1,6 +1,6 @@
 # Factory Transpiler
 
-![Badge](https://img.shields.io/badge/Factory-2.2-blue)
+![Badge](https://img.shields.io/badge/Factory-2.3-blue)
 
 ### supports
 

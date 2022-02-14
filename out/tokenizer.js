@@ -1,64 +1,32 @@
-"use strict";
-Object.defineProperty(exports, "__esModule", { value: true });
-exports.createTokenStream = exports.TokenType = void 0;
-const iterable_stream_1 = require("./iterable-stream");
-const os = require("os");
-const exceptions_1 = require("./exceptions");
+'use strict';
+Object.defineProperty(exports, '__esModule', { value: true });
+exports.IterableTokenStream = exports.IterableSkipableStream = exports.createTokenStream = exports.TokenType = void 0;
+const iterable_stream_1 = require('./iterable-stream');
+const os = require('os');
+const exceptions_1 = require('./exceptions');
 var TokenType;
 (function (TokenType) {
-    TokenType[TokenType["TAG"] = 0] = "TAG";
-    TokenType[TokenType["ATTRIBUTE"] = 1] = "ATTRIBUTE";
-    TokenType[TokenType["STRING"] = 2] = "STRING";
-    TokenType[TokenType["PARENTHESES_OPEN"] = 3] = "PARENTHESES_OPEN";
-    TokenType[TokenType["PARENTHESES_CLOSED"] = 4] = "PARENTHESES_CLOSED";
-    TokenType[TokenType["BRACES_OPEN"] = 5] = "BRACES_OPEN";
-    TokenType[TokenType["BRACES_CLOSED"] = 6] = "BRACES_CLOSED";
-    TokenType[TokenType["BRACKET_OPEN"] = 7] = "BRACKET_OPEN";
-    TokenType[TokenType["BRACKET_CLOSED"] = 8] = "BRACKET_CLOSED";
-    TokenType[TokenType["ASSIGN"] = 9] = "ASSIGN";
-    TokenType[TokenType["ASTERISK"] = 10] = "ASTERISK";
-    TokenType[TokenType["EOL"] = 11] = "EOL";
-    TokenType[TokenType["WHITESPACE"] = 12] = "WHITESPACE";
-    TokenType[TokenType["EOF"] = 13] = "EOF";
-})(TokenType = exports.TokenType || (exports.TokenType = {}));
+    TokenType[(TokenType['TAG'] = 0)] = 'TAG';
+    TokenType[(TokenType['ATTRIBUTE'] = 1)] = 'ATTRIBUTE';
+    TokenType[(TokenType['STRING'] = 2)] = 'STRING';
+    TokenType[(TokenType['PARENTHESES_OPEN'] = 3)] = 'PARENTHESES_OPEN';
+    TokenType[(TokenType['PARENTHESES_CLOSED'] = 4)] = 'PARENTHESES_CLOSED';
+    TokenType[(TokenType['BRACES_OPEN'] = 5)] = 'BRACES_OPEN';
+    TokenType[(TokenType['BRACES_CLOSED'] = 6)] = 'BRACES_CLOSED';
+    TokenType[(TokenType['BRACKET_OPEN'] = 7)] = 'BRACKET_OPEN';
+    TokenType[(TokenType['BRACKET_CLOSED'] = 8)] = 'BRACKET_CLOSED';
+    TokenType[(TokenType['ASSIGN'] = 9)] = 'ASSIGN';
+    TokenType[(TokenType['ASTERISK'] = 10)] = 'ASTERISK';
+    TokenType[(TokenType['EOL'] = 11)] = 'EOL';
+    TokenType[(TokenType['WHITESPACE'] = 12)] = 'WHITESPACE';
+    TokenType[(TokenType['EOF'] = 13)] = 'EOF';
+})((TokenType = exports.TokenType || (exports.TokenType = {})));
 function createTokenStream(input) {
     const tokens = [];
     input = input.replace(os.EOL, '\n');
     return new IterableTokenStream([...createLineTokens(-1, input)]);
 }
 exports.createTokenStream = createTokenStream;
-class IterableTokenStream extends iterable_stream_1.IterableStream {
-    step() {
-        let typ;
-        do {
-            super.step();
-            if (!this.getCurrentEntry()) {
-                break;
-            }
-            typ = this.getCurrentEntry().type;
-        } while (this.hasEntriesLeft() &&
-            this.getCurrentEntry() != undefined &&
-            (typ == TokenType.WHITESPACE || typ == TokenType.EOL));
-        return this.getCurrentEntry();
-    }
-    stepBackwards() {
-        let typ;
-        do {
-            super.stepBackwards();
-            super.stepBackwards();
-            super.step();
-            if (!this.getCurrentEntry()) {
-                break;
-            }
-            typ = this.getCurrentEntry().type;
-        } while (this.hasEntriesLeft() &&
-            this.getCurrentEntry() != undefined &&
-            (typ == TokenType.WHITESPACE || typ == TokenType.EOL));
-        if (!this.hasEntriesLeft()) {
-            return undefined;
-        }
-    }
-}
 function createLineTokens(line, input) {
     const tokens = [];
     const chars = Array.from(input);
@@ -76,24 +44,21 @@ function createLineTokens(line, input) {
                 data: '\n',
                 end: stream.index(),
             });
-        }
-        else if (character.trim().length === 0) {
+        } else if (character.trim().length === 0) {
             tokens.push({
                 type: TokenType.WHITESPACE,
                 start: lastContentAt,
                 end: stream.index(),
                 data: ' ',
             });
-        }
-        else if (/[A-Za-z]/.test(character)) {
+        } else if (/[A-Za-z]/.test(character)) {
             tokens.push({
                 type: TokenType.TAG,
                 start: lastContentAt,
                 data: buildTag(stream),
                 end: stream.index(),
             });
-        }
-        else
+        } else
             switch (character) {
                 case '(':
                     tokens.push({
@@ -168,14 +133,17 @@ function createLineTokens(line, input) {
                     });
                     break;
                 default:
-                    throw new exceptions_1.FactoryCharacterException(stream, `unknown character Ln ${line}, Col ${stream.index()} (${character})`);
+                    throw new exceptions_1.FactoryCharacterException(
+                        stream,
+                        `unknown character Ln ${line}, Col ${stream.index()} (${character})`
+                    );
             }
         lastContentAt = stream.index();
     }
     tokens.push({
         type: TokenType.EOF,
         start: lastContentAt,
-        data: '>End of File<',
+        data: 'END-OF-FILE',
         end: stream.index(),
     });
     return tokens;
@@ -210,3 +178,40 @@ function buildString(stream) {
     }
     return content;
 }
+class IterableSkipableStream extends iterable_stream_1.IterableStream {
+    step() {
+        do {
+            super.step();
+            if (!this.getCurrentEntry()) {
+                break;
+            }
+        } while (
+            this.hasEntriesLeft() &&
+            this.getCurrentEntry() != undefined &&
+            this.shouldSkipEntry(this.getCurrentEntry())
+        );
+        return this.getCurrentEntry();
+    }
+    stepBackwards() {
+        do {
+            super.stepBackwards();
+            if (!this.getCurrentEntry()) {
+                break;
+            }
+        } while (
+            this.hasEntriesLeft() &&
+            this.getCurrentEntry() != undefined &&
+            this.shouldSkipEntry(this.getCurrentEntry())
+        );
+        if (!this.hasEntriesLeft()) {
+            return undefined;
+        }
+    }
+}
+exports.IterableSkipableStream = IterableSkipableStream;
+class IterableTokenStream extends IterableSkipableStream {
+    shouldSkipEntry(entry) {
+        return entry.type == TokenType.WHITESPACE || entry.type == TokenType.EOL;
+    }
+}
+exports.IterableTokenStream = IterableTokenStream;

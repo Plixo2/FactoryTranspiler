@@ -30,44 +30,6 @@ export function createTokenStream(input: string): IterableTokenStream {
     input = input.replace(os.EOL, '\n');
     return new IterableTokenStream([...createLineTokens(-1, input)]);
 }
-class IterableTokenStream extends IterableStream<Token> {
-    public step(): Token {
-        let typ: TokenType;
-        do {
-            super.step();
-            if (!this.getCurrentEntry()) {
-                break;
-            }
-            typ = this.getCurrentEntry().type;
-        } while (
-            this.hasEntriesLeft() &&
-            this.getCurrentEntry() != undefined &&
-            (typ == TokenType.WHITESPACE || typ == TokenType.EOL)
-        );
-        return this.getCurrentEntry();
-    }
-
-    public stepBackwards(): void {
-        let typ: TokenType;
-        do {
-            super.stepBackwards();
-            super.stepBackwards();
-            super.step();
-
-            if (!this.getCurrentEntry()) {
-                break;
-            }
-            typ = this.getCurrentEntry().type;
-        } while (
-            this.hasEntriesLeft() &&
-            this.getCurrentEntry() != undefined &&
-            (typ == TokenType.WHITESPACE || typ == TokenType.EOL)
-        );
-        if (!this.hasEntriesLeft()) {
-            return undefined;
-        }
-    }
-}
 
 function createLineTokens(line: number, input: string): Token[] {
     const tokens: Token[] = [];
@@ -188,7 +150,7 @@ function createLineTokens(line: number, input: string): Token[] {
     tokens.push({
         type: TokenType.EOF,
         start: lastContentAt,
-        data: '>End of File<',
+        data: 'EOF',
         end: stream.index(),
     });
 
@@ -228,4 +190,44 @@ function buildString(stream: IterableStream<string>): string {
     }
 
     return content;
+}
+export abstract class IterableSkipableStream<T> extends IterableStream<T> {
+    public abstract shouldSkipEntry(entry: T): boolean;
+
+    public step(): T {
+        do {
+            super.step();
+            if (!this.getCurrentEntry()) {
+                break;
+            }
+        } while (
+            this.hasEntriesLeft() &&
+            this.getCurrentEntry() != undefined &&
+            this.shouldSkipEntry(this.getCurrentEntry())
+        );
+        return this.getCurrentEntry();
+    }
+
+    public stepBackwards(): void {
+        do {
+            super.stepBackwards();
+
+            if (!this.getCurrentEntry()) {
+                break;
+            }
+        } while (
+            this.hasEntriesLeft() &&
+            this.getCurrentEntry() != undefined &&
+            this.shouldSkipEntry(this.getCurrentEntry())
+        );
+        if (!this.hasEntriesLeft()) {
+            return undefined;
+        }
+    }
+}
+
+export class IterableTokenStream extends IterableSkipableStream<Token> {
+    public shouldSkipEntry(entry: Token): boolean {
+        return entry.type == TokenType.WHITESPACE || entry.type == TokenType.EOL;
+    }
 }

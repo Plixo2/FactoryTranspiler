@@ -1,6 +1,12 @@
 # Change Log
 
-## [2.1.2]
+## [2.3.0]
+
+-   added shields.io badge
+-   added own namespace for all transpiler results (logic from index.js)
+-   added an IterableSkipableStream for skipping sertain items (whitespace, End of line...)
+
+## [2.2.2]
 
 -   updated readme
 
