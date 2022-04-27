@@ -1,6 +1,10 @@
 # Factory Transpiler
 
+### Get the Visual Studio Code Extension [here](https://marketplace.visualstudio.com/items?itemName=plixo.factory-vscode-support)!
+
 ![Badge](https://img.shields.io/badge/Factory-2.3-blue)
+
+
 
 ### supports
 
